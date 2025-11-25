@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rock Paper Scissors</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .choice-btn {
+            font-size: 3em;
+            padding: 20px;
+            margin: 10px;
+            min-width: 120px;
+            min-height: 120px;
+        }
+        .score-box {
+            font-size: 2em;
+            font-weight: bold;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+        }
+        .win {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .lose {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .tie {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .message-box {
+            font-size: 1.5em;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background-color: #e7f3ff;
+        }
+        .result-display {
+            font-size: 2em;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        table {
+            background-color: white;
+        }
+    </style>
+    <script>
+        class RockPaperScissorsUI {
+            constructor() {
+                console.log("Initializing Rock Paper Scissors UI");
+                
+                // Properties
+                this.message = "Waiting to start...";
+                this.round = 0;
+                this.total_rounds = 5;
+                this.human_wins = 0;
+                this.computer_wins = 0;
+                this.ties = 0;
+                this.your_choice = "";
+                this.computer_choice = "";
+                this.result = "";
+                
+                this.prepare_outlets();
+                this.setup_buttons();
+            }
+            
+            prepare_outlets() {
+                // Setup data binding for automatic UI updates
+                $('[data-outlet-value]').each((index, element) => {
+                    var element_id = element.id;
+                    var outlet_value = element.getAttribute("data-outlet-value");
+                    
+                    if (this[outlet_value] != null) {
+                        $("#" + element_id).html(this[outlet_value]);
+                    }
+                    
+                    var start_value = this[outlet_value];
+                    
+                    Object.defineProperty(this, outlet_value, {
+                        get: () => { return start_value; },
+                        set: (new_val) => {
+                            $("#" + element_id).html(new_val);
+                            start_value = new_val;
+                        }
+                    });
+                });
+            }
+            
+            setup_buttons() {
+                // Rock button
+                $('#rock-btn').click(() => {
+                    this.submit_choice("rock");
+                });
+                
+                // Paper button
+                $('#paper-btn').click(() => {
+                    this.submit_choice("paper");
+                });
+                
+                // Scissors button
+                $('#scissors-btn').click(() => {
+                    this.submit_choice("scissors");
+                });
+            }
+            
+            submit_choice(choice) {
+                console.log("Submitting choice: " + choice);
+                
+                // Disable buttons
+                this.disable_buttons();
+                
+                // Send to mTree
+                var action_data = {
+                    "action": "submit_choice",
+                    "choice": choice
+                };
+                
+                window.mTree_subject_connection.send_agent_action(action_data);
+            }
+            
+            enable_buttons() {
+                $('#rock-btn').prop('disabled', false);
+                $('#paper-btn').prop('disabled', false);
+                $('#scissors-btn').prop('disabled', false);
+            }
+            
+            disable_buttons() {
+                $('#rock-btn').prop('disabled', true);
+                $('#paper-btn').prop('disabled', true);
+                $('#scissors-btn').prop('disabled', true);
+            }
+            
+            update_from_agent(data) {
+                console.log("Received data from agent:", data);
+                
+                // Update message
+                if (data.message) {
+                    this.message = data.message;
+                }
+                
+                // Update round info
+                if (data.round) {
+                    this.round = data.round;
+                }
+                
+                if (data.total_rounds) {
+                    this.total_rounds = data.total_rounds;
+                }
+                
+                // Update scores
+                if (data.human_wins !== undefined) {
+                    this.human_wins = data.human_wins;
+                }
+                
+                if (data.computer_wins !== undefined) {
+                    this.computer_wins = data.computer_wins;
+                }
+                
+                if (data.ties !== undefined) {
+                    this.ties = data.ties;
+                }
+                
+                // Update result display
+                if (data.your_choice) {
+                    this.your_choice = this.get_emoji(data.your_choice);
+                }
+                
+                if (data.computer_choice) {
+                    this.computer_choice = this.get_emoji(data.computer_choice);
+                }
+                
+                if (data.result) {
+                    this.result = data.result;
+                    
+                    // Update result box styling
+                    $('#result-box').removeClass('win lose tie');
+                    if (data.result.includes("WIN")) {
+                        $('#result-box').addClass('win');
+                    } else if (data.result.includes("LOSE")) {
+                        $('#result-box').addClass('lose');
+                    } else if (data.result.includes("TIE")) {
+                        $('#result-box').addClass('tie');
+                    }
+                }
+                
+                // Update history table
+                if (data.history) {
+                    this.update_history(data.history);
+                }
+                
+                // Enable/disable buttons
+                if (data.enable_buttons) {
+                    this.enable_buttons();
+                } else if (data.enable_buttons === false) {
+                    this.disable_buttons();
+                }
+            }
+            
+            get_emoji(choice) {
+                const emojis = {
+                    "rock": "🪨",
+                    "paper": "📄",
+                    "scissors": "✂️"
+                };
+                return emojis[choice] || choice;
+            }
+            
+            update_history(history) {
+                // Clear existing history
+                $('#history-table tbody').empty();
+                
+                // Add each row
+                for (let entry of history) {
+                    var row = "<tr>" +
+                        "<td>" + entry.round + "</td>" +
+                        "<td>" + this.get_emoji(entry.your_choice) + "</td>" +
+                        "<td>" + this.get_emoji(entry.computer_choice) + "</td>" +
+                        "<td>" + entry.result + "</td>" +
+                        "</tr>";
+                    $('#history-table tbody').append(row);
+                }
+            }
+        }
+        
+        // Initialize when document is ready
+        $(document).ready(function() {
+            console.log("Document ready, initializing UI...");
+            window.ui_manager = new RockPaperScissorsUI();
+            
+            // For testing without mTree connection
+            if (!window.mTree_subject_connection) {
+                console.log("No mTree connection - running in test mode");
+                window.mTree_subject_connection = {
+                    send_agent_action: function(data) {
+                        console.log("TEST MODE - Would send:", data);
+                    }
+                };
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- Title -->
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">🪨 📄 ✂️ Rock Paper Scissors</h1>
+            </div>
+        </div>
+        
+        <!-- Message Box -->
+        <div class="row">
+            <div class="col-12">
+                <div class="message-box">
+                    <span id="message" data-outlet-value="message">Waiting to start...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Round and Score Info -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Round</h5>
+                        <p class="card-text fs-3">
+                            <span id="round" data-outlet-value="round">0</span> / 
+                            <span id="total_rounds" data-outlet-value="total_rounds">5</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Wins</h5>
+                        <p class="card-text fs-3">
+                            <span id="human_wins" data-outlet-value="human_wins">0</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-danger text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Computer Wins</h5>
+                        <p class="card-text fs-3">
+                            <span id="computer_wins" data-outlet-value="computer_wins">0</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-warning">
+                    <div class="card-body">
+                        <h5 class="card-title">Ties</h5>
+                        <p class="card-text fs-3">
+                            <span id="ties" data-outlet-value="ties">0</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Choice Buttons -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Make Your Choice</h3>
+                    </div>
+                    <div class="card-body text-center">
+                        <button id="rock-btn" class="btn btn-primary choice-btn" disabled>
+                            🪨<br>Rock
+                        </button>
+                        <button id="paper-btn" class="btn btn-primary choice-btn" disabled>
+                            📄<br>Paper
+                        </button>
+                        <button id="scissors-btn" class="btn btn-primary choice-btn" disabled>
+                            ✂️<br>Scissors
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Result Display -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card" id="result-box">
+                    <div class="card-body text-center result-display">
+                        <div class="row">
+                            <div class="col-4">
+                                <h5>Your Choice</h5>
+                                <div class="fs-1">
+                                    <span id="your_choice" data-outlet-value="your_choice">-</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <h5>Result</h5>
+                                <div class="fs-3">
+                                    <span id="result" data-outlet-value="result">-</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <h5>Computer Choice</h5>
+                                <div class="fs-1">
+                                    <span id="computer_choice" data-outlet-value="computer_choice">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Game History</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped" id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Round</th>
+                                    <th>Your Choice</th>
+                                    <th>Computer Choice</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- History rows added dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
