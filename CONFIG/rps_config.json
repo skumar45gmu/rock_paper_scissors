@@ -1,0 +1,14 @@
+{
+    "experiment_name": "rock_paper_scissors",
+    "num_runs": 1,
+    "actors": {
+        "rps_environment": 1,
+        "rps_institution": 1,
+        "human_agent": 1,
+        "computer_agent": 1
+    },
+    "properties": {
+        "num_rounds": 5,
+        "institution_address": "institution_1"
+    }
+}
