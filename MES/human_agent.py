@@ -21,6 +21,10 @@ class human_agent(Agent):
         self.computer_wins = 0
         self.ties = 0
         
+        # Configure UI
+        self.use_existing_agent_ui = True
+        self.html_template = "rps_ui.html"
+        
     @directive_decorator("request_choice")
     def request_choice(self, message: Message):
         """Institution is requesting a choice for this round"""

@@ -1,12 +1,14 @@
 {
-    "experiment_name": "rock_paper_scissors",
-    "num_runs": 1,
-    "actors": {
-        "rps_environment": 1,
-        "rps_institution": 1,
-        "human_agent": 1,
-        "computer_agent": 1
-    },
+    "mtree_type": "mes_simulation_description",
+    "name": "Rock Paper Scissors",
+    "id": "rps_001",
+    "environment": "rps_environment",
+    "institution": "rps_institution",
+    "number_of_runs": 1,
+    "agents": [
+        {"agent_name": "human_agent", "number": 1},
+        {"agent_name": "computer_agent", "number": 1}
+    ],
     "properties": {
         "num_rounds": 5,
         "institution_address": "institution_1"
